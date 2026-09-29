@@ -58,6 +58,22 @@ way macOS does. `0.875` (one notch below the macOS default) felt closest to macO
 only. In theory it should be `1`, but on a 14" M1 Pro at Hyprland scale 4/3, Brave
 still ran ahead of the fingers at `1`. Terminals like foot don't use it.
 
+## Optional: fix the first movement after a pause (patched libinput)
+
+libinput's custom acceleration profile ignores new touches when estimating speed. After
+the trackpad has been idle for over a second, it assumes the first event took 7 ms, so the
+small shift of a finger landing gets accelerated like a fast flick and the pointer jumps.
+The built-in profiles don't have this problem. The patch in `libinput/` makes the custom
+profile measure the first movement from the moment the finger landed, like macOS does.
+
+```bash
+./libinput/install.sh    # build, install, and pin with IgnorePkg (asks for your password)
+```
+
+Log out and back in afterwards. Because the package is pinned, `pacman -Syu` skips
+libinput updates; re-run `./libinput/install.sh` to rebuild on a new version.
+`./libinput/uninstall.sh` restores the stock package and removes the pin.
+
 ## Uninstall
 
 ```bash

@@ -1,0 +1,59 @@
+# libinput with the custom acceleration profile restarted on each new touch.
+# Derived from Arch Linux's libinput PKGBUILD (heftig, andyrtr); built by
+# install.sh, which sets pkgver/pkgrel to match the repository version.
+
+pkgname=libinput
+pkgver=1.32.0
+pkgrel=1.1
+pkgdesc="Input device management and event handling library (custom accel restart patch)"
+url="https://wayland.freedesktop.org/libinput/doc/latest/"
+arch=(x86_64 aarch64)
+license=(MIT)
+depends=(
+  glibc
+  libevdev
+  libgcc
+  libwacom
+  lua54
+  mtdev
+  systemd-libs
+)
+makedepends=(
+  git
+  meson
+)
+optdepends=('libinput-tools: debug utilities')
+provides=(libinput.so)
+source=(
+  "git+https://gitlab.freedesktop.org/libinput/libinput.git?signed#tag=$pkgver"
+  libinput-custom-accel-restart.patch
+)
+b2sums=('SKIP' 'SKIP')
+validpgpkeys=(
+  3C2C43D9447D5938EF4551EBE23B7E70B467F0BF # Peter Hutterer (Who-T) <office@who-t.net>
+)
+
+prepare() {
+  cd libinput
+  patch -Np1 -i ../libinput-custom-accel-restart.patch
+}
+
+build() {
+  local meson_options=(
+    -D documentation=false
+    -D debug-gui=false
+    -D tests=false
+  )
+
+  arch-meson libinput build "${meson_options[@]}"
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+
+  # The command-line tools belong to libinput-tools.
+  rm -rf "$pkgdir"/usr/bin "$pkgdir"/usr/lib/libinput "$pkgdir"/usr/share/man "$pkgdir"/usr/share/zsh
+
+  install -Dm644 libinput/COPYING -t "$pkgdir/usr/share/licenses/$pkgname"
+}

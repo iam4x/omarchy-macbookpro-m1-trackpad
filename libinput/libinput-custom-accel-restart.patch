@@ -1,0 +1,36 @@
+diff --git i/src/filter-custom.c w/src/filter-custom.c
+index fa74d8d..5b422e4 100644
+--- i/src/filter-custom.c
++++ w/src/filter-custom.c
+@@ -263,10 +263,30 @@ custom_accelerator_filter(enum libinput_config_accel_type accel_type,
+ 	return custom_accel_function_filter(cf, unaccelerated, time);
+ }
+ 
++static void
++custom_accel_function_restart(struct custom_accel_function *cf, usec_t time)
++{
++	if (cf == NULL)
++		return;
++
++	cf->last_time = time;
++}
++
+ static void
+ custom_accelerator_restart(struct motion_filter *filter, void *data, usec_t time)
+ {
+-	/* noop, this function has no effect in the custom interface */
++	struct custom_accelerator *f = (struct custom_accelerator *)filter;
++
++	/* A new touch (or a touchpad jump) starts a new motion: measure the
++	 * first event's speed from this point in time, like the other
++	 * profiles do via trackers_reset(). Otherwise the first event after
++	 * more than MOTION_TIMEOUT of inactivity is assumed to have happened
++	 * over FIRST_MOTION_TIME_INTERVAL, so the jitter of a finger landing
++	 * gets accelerated like a fast flick.
++	 */
++	custom_accel_function_restart(f->funcs.fallback, time);
++	custom_accel_function_restart(f->funcs.motion, time);
++	custom_accel_function_restart(f->funcs.scroll, time);
+ }
+ 
+ static void

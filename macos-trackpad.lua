@@ -36,6 +36,13 @@ local macos = {
   hyprland_scale = 4 / 3,
   -- foot [scrollback] multiplier, or false to leave foot alone.
   foot_multiplier = 7,
+  -- Window classes of Chromium-based apps (browsers, their web apps, Electron
+  -- apps). Chromium multiplies Wayland touchpad scroll by 12 (value / 10 * 120),
+  -- so these get 1/12 to scroll 1:1. Set to false to leave them alone.
+  chromium_classes = "^(chromium|brave-browser|google-chrome.*|vivaldi.*|helium.*|thorium.*|chrome-.*|brave-.*)$",
+  -- Extra scroll multiplier for those apps, on top of the 1/12, tuned by feel
+  -- against macOS (1 = theoretical 1:1).
+  chromium_scroll_factor = 0.75,
 }
 for k, v in pairs(settings) do
   macos[k] = v
@@ -148,6 +155,10 @@ hl.device({
 
 -- foot scrolls touchpad pixels / cell height * multiplier, in buffer pixels.
 -- 1:1 content tracking needs an effective multiplier equal to the scale.
+if macos.chromium_classes then
+  o.window(macos.chromium_classes, { scroll_touchpad = macos.chromium_scroll_factor / 12 })
+end
+
 if macos.foot_multiplier then
   o.window("foot", { scroll_touchpad = macos.hyprland_scale / macos.foot_multiplier })
 end

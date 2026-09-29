@@ -52,6 +52,8 @@ tracking_speed=${tracking_speed:-$(existing tracking_speed)}
 tracking_speed=${tracking_speed:-0.875}
 scroll_speed=${scroll_speed:-$(existing scroll_speed)}
 scroll_speed=${scroll_speed:-1.0}
+chromium_scroll_factor=$(existing chromium_scroll_factor)
+chromium_scroll_factor=${chromium_scroll_factor:-0.75}
 
 # --- Detect the trackpad ------------------------------------------------------
 
@@ -145,6 +147,9 @@ return {
   macos_scale = $macos_scale,
   hyprland_scale = $hyprland_scale,
   foot_multiplier = $foot_multiplier,
+  -- Chromium-based apps only (browsers, web apps): multiplier on top of 1:1.
+  chromium_scroll_factor = $chromium_scroll_factor,
+$( ((do_browsers)) || echo "  chromium_classes = false,")
 }
 EOF
 info "Wrote $MODULE and $SETTINGS"
@@ -172,20 +177,15 @@ fi
 
 # --- Chromium-based browsers --------------------------------------------------
 
-FEATURE="WaylandUnscaledTouchpadScrolling:scroll_scaling_factor/1.0"
-if ((do_browsers)); then
-  for flags in "$HOME"/.config/{chromium,brave,chrome,google-chrome,helium,vivaldi,thorium}-flags.conf; do
-    [[ -f $flags ]] || continue
-    grep -q WaylandUnscaledTouchpadScrolling "$flags" && continue
-    cp "$flags" "$flags.bak.macos-trackpad-$STAMP"
-    if grep -q '^--enable-features=' "$flags"; then
-      sed -i "s|^--enable-features=\(.*\)$|--enable-features=\1,$FEATURE|" "$flags"
-    else
-      echo "--enable-features=$FEATURE" >>"$flags"
-    fi
-    info "Enabled pixel-accurate touchpad scrolling in $flags (restart the browser)"
-  done
-fi
+# Chromium's scroll multiplier is cancelled by a window rule in the module.
+# Earlier versions used the WaylandUnscaledTouchpadScrolling flag instead,
+# which not every build honors; remove it so the two don't stack.
+for flags in "$HOME"/.config/{chromium,brave,chrome,google-chrome,helium,vivaldi,thorium}-flags.conf; do
+  [[ -f $flags ]] && grep -q WaylandUnscaledTouchpadScrolling "$flags" || continue
+  sed -i -e 's|,WaylandUnscaledTouchpadScrolling:scroll_scaling_factor/1\.0||' \
+    -e '/^--enable-features=WaylandUnscaledTouchpadScrolling:scroll_scaling_factor\/1\.0$/d' "$flags"
+  info "Removed the old WaylandUnscaledTouchpadScrolling flag from $flags (restart the browser)"
+done
 
 # --- Apply --------------------------------------------------------------------
 

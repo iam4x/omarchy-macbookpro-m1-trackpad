@@ -9,8 +9,9 @@ not a hand-tuned approximation.
   distance on screen as it would on macOS.
 - **Scrolling:** content tracks your fingers 1:1 at slow speed, with Apple's scroll
   acceleration curve (`HIDScrollAccelCurves`) on faster swipes.
-- **Browsers:** Chromium-based browsers stop multiplying touchpad scroll by 12× and get
-  pixel-accurate scrolling with their built-in momentum.
+- **Browsers:** Chromium-based browsers (and their web apps) multiply Wayland touchpad
+  scroll by 12×; a Hyprland window rule cancels it, so they scroll 1:1 and keep their
+  built-in momentum.
 - **foot:** touchpad scrolling in the terminal matches 1:1 without changing the mouse wheel.
 - **Sliders like macOS:** tune with the same notch values as macOS's *Tracking speed*.
 
@@ -23,7 +24,7 @@ cd omarchy-macbookpro-m1-trackpad
 ```
 
 The installer detects everything machine-specific and asks for your password once, to
-read the trackpad's resolution from the kernel. Restart your browser afterwards.
+read the trackpad's resolution from the kernel.
 
 It installs:
 
@@ -32,7 +33,6 @@ It installs:
 | `~/.config/hypr/macos-trackpad.lua` | The curve logic |
 | `~/.config/hypr/macos-trackpad-settings.lua` | Detected values and your tuning |
 | `~/.config/hypr/input.lua` | A `require` hook at the end (backed up first) |
-| `~/.config/*-flags.conf` | `WaylandUnscaledTouchpadScrolling` for Chromium, Brave, Chrome, Helium, Vivaldi, Thorium (backed up first) |
 
 Re-running `./install.sh` is safe: it refreshes detected values (for example after
 changing your monitor scale) and keeps your speed tuning.
@@ -53,6 +53,10 @@ scroll_speed = 1.0,
 Values between notches work too (for example `0.8`): the curves are interpolated the same
 way macOS does. `0.875` (one notch below the macOS default) felt closest to macOS on a
 14" M1 Pro.
+
+`chromium_scroll_factor` (default `0.75`) is an extra multiplier for Chromium-based apps
+only. In theory it should be `1`, but on a 14" M1 Pro at Hyprland scale 4/3, Brave
+still ran ahead of the fingers at `1`. Terminals like foot don't use it.
 
 ## Uninstall
 
@@ -75,6 +79,11 @@ speed slider. This project:
 4. Samples the result into a 64-point libinput custom acceleration profile
    (`accel_profile = "custom …"`), with a matching `scroll_points` curve.
 
+Chromium computes touchpad scroll as `value / 10 * 120`, so the module adds a
+`scroll_touchpad = 1/12` window rule for Chromium-based window classes. Electron apps have
+the same multiplier: add their classes to `chromium_classes` in the settings file if they
+scroll too fast.
+
 The installer also disables leftover files in `~/.local/state/omarchy/toggles/hypr/` that
 set this trackpad: they load after `input.lua` and would silently override it.
 
@@ -88,8 +97,6 @@ set this trackpad: they load after `input.lua` and would silently override it.
 - Scroll units can't be converted exactly from macOS, so slow scrolling is set to track
   your fingers 1:1 and only Apple's scroll curve shape is used.
 - Momentum after lifting your fingers is per app: Chromium and GTK4 have it; foot doesn't.
-- An Omarchy update may reset the browser flag files. If Chromium scrolling suddenly gets
-  12× faster, run `./install.sh` again.
 
 ## Sources
 
@@ -99,5 +106,5 @@ set this trackpad: they load after `input.lua` and would silently override it.
   `HIDAccelCurves` and `HIDScrollAccelCurves` tables
 - [libinput pointer acceleration](https://wayland.freedesktop.org/libinput/doc/latest/pointer-acceleration.html)
   and `src/filter-custom.c`
-- Chromium `ui/ozone/common/features.cc`: `WaylandUnscaledTouchpadScrolling`
+- Chromium `ui/ozone/platform/wayland/host/wayland_pointer.cc`: touchpad axis scaling
 - [Asahi Linux hid-magicmouse](https://github.com/AsahiLinux/linux): trackpad dimensions
